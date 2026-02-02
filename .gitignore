@@ -1,0 +1,21 @@
+# virtual environment
+venv/
+
+# python cache
+__pycache__/
+*.pyc
+
+# insightface models
+.insightface/
+
+# images (faces/selfies)
+*.jpg
+*.jpeg
+*.png
+
+# environment variables
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
