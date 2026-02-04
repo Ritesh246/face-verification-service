@@ -1,10 +1,8 @@
 fastapi
-uvicorn
-python-dotenv
-supabase
-postgrest
-httpx
+uvicorn[standard]
 numpy
-opencv-python
+opencv-python-headless
 insightface
 onnxruntime
+supabase
+python-dotenv
