@@ -1,46 +1,43 @@
-# app/attendance_writer.py
-
-from datetime import datetime, timezone
+from datetime import date
 from app.supabase_client import get_supabase_client
+from postgrest.exceptions import APIError
 
 supabase = get_supabase_client()
 
-def write_attendance_records(
-    session_id: str,
-    class_id: str,
-    attendance_results: list,
-    registered_faces: dict
-):
-    """
-    attendance_results:
-    [
-        { "roll": 47, "status": "present" },
-        { "roll": 48, "status": "absent" }
-    ]
-    """
+def write_attendance_records(session_id, class_id, attendance_results, registered_faces):
+    today = date.today()
 
-    rows = []
+    inserted = []
+    skipped = []
 
-    for result in attendance_results:
-        roll = result["roll"]          # ✅ STRICT
-        status = result["status"]
+    for record in attendance_results:
+        roll = record["roll"]
+        status = record["status"]
 
-        if roll not in registered_faces:
-            print(f"⚠️ Roll {roll} not found in registered_faces")
+        if status != "present":
             continue
 
-        student_id = registered_faces[roll]["student_id"]
+        try:
+            supabase.table("attendance_records").insert({
+                "session_id": session_id,
+                "class_id": class_id,
+                "student_id": registered_faces[roll]["student_id"],
+                "roll_number": str(roll),
+                "status": "present",
+                "attendance_date": today
+            }).execute()
 
-        rows.append({
-            "session_id": session_id,
-            "class_id": class_id,
-            "student_id": student_id,           # ✅ NOT NULL
-            "roll_number": roll,                # ✅ NOT NULL
-            "status": status,
-            "marked_at": datetime.now(timezone.utc).isoformat()  # ✅ SERIALIZABLE
-        })
+            inserted.append(roll)
 
-    if not rows:
-        raise Exception("No attendance rows to insert")
+        except APIError as e:
+            # Unique constraint violation → already marked today
+            if "unique_daily_attendance" in str(e):
+                print(f"⚠️ Roll {roll} already marked today. Skipping.")
+                skipped.append(roll)
+            else:
+                raise e
 
-    supabase.table("attendance_records").insert(rows).execute()
+    return {
+        "inserted": inserted,
+        "skipped": skipped
+    }
