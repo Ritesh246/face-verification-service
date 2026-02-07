@@ -28,30 +28,23 @@ def load_image_from_url(url: str) -> np.ndarray:
 
 
 # -------------------------------
-# Attendance selfie (attendance-selfies bucket)
+# Attendance selfie (PUBLIC bucket)
 # -------------------------------
 
-def get_attendance_selfie(selfie_path: str) -> np.ndarray:
+def get_attendance_selfie(selfie_url: str) -> np.ndarray:
     """
-    selfie_path example:
-    class_id/session_id/filename.png
+    selfie_url example:
+    https://<project>.supabase.co/storage/v1/object/public/attendance-selfies/...
     """
 
-    print(f"🔥 RAW selfie_path RECEIVED: '{selfie_path}'")
+    print(f"🔥 SELFIE URL RECEIVED (PUBLIC): {selfie_url}")
 
-    signed = (
-        supabase
-        .storage
-        .from_("attendance-selfies")
-        .create_signed_url(selfie_path, expires_in=60)
-    )
-
-    signed_url = signed["signedURL"]
-    return load_image_from_url(signed_url)
+    # ✅ Direct HTTP fetch (NO signed URL)
+    return load_image_from_url(selfie_url)
 
 
 # -------------------------------
-# Registered student face (face-images bucket)
+# Registered student face (PRIVATE bucket)
 # -------------------------------
 
 def get_registered_face(face_image_path: str) -> np.ndarray:
@@ -102,7 +95,7 @@ def get_registered_faces_by_rolls(roll_numbers: list[int]) -> dict:
         img = get_registered_face(row["face_image_path"])
 
         registered_faces[roll] = {
-            "student_id": row["id"],   # ⚠️ REQUIRED
+            "student_id": row["id"],
             "image": img
         }
 
