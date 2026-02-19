@@ -5,7 +5,7 @@ from postgrest.exceptions import APIError
 supabase = get_supabase_client()
 
 def write_attendance_records(session_id, class_id, attendance_results, registered_faces):
-    today = date.today()
+    today = date.today().isoformat()   # ✅ FIXED HERE
 
     inserted = []
     skipped = []
@@ -24,13 +24,12 @@ def write_attendance_records(session_id, class_id, attendance_results, registere
                 "student_id": registered_faces[roll]["student_id"],
                 "roll_number": str(roll),
                 "status": "present",
-                "attendance_date": today
+                "attendance_date": today   # now it's a string
             }).execute()
 
             inserted.append(roll)
 
         except APIError as e:
-            # Unique constraint violation → already marked today
             if "unique_daily_attendance" in str(e):
                 print(f"⚠️ Roll {roll} already marked today. Skipping.")
                 skipped.append(roll)
