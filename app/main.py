@@ -3,6 +3,7 @@
 from fastapi import FastAPI, HTTPException
 from typing import List
 import numpy as np
+import logging
 
 from app.schemas import VerifyFaceRequest, VerifyFaceResponse, StudentResult
 from app.image_loader import (
@@ -18,7 +19,15 @@ import threading
 # FastAPI app
 # -----------------------------
 app = FastAPI(title="Face Verification Service")
+from fastapi.middleware.cors import CORSMiddleware
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # later you can restrict to your Vercel domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # -----------------------------
 # Lazy-loaded FaceAnalysis
 # -----------------------------
@@ -30,7 +39,8 @@ def get_face_app():
     if _face_app is None:
         with _face_lock:
             if _face_app is None:
-                print("🔄 Loading InsightFace model (lazy)...")
+                logging.basicConfig(level=logging.INFO)
+                logging.info("Loading InsightFace model...")
                 fa = FaceAnalysis(
                     name="buffalo_l",
                     providers=["CPUExecutionProvider"]
@@ -57,6 +67,11 @@ SIMILARITY_THRESHOLD = 0.35
 def health():
     return {"status": "ok"}
 
+@app.get("/warmup")
+def warmup():
+    get_face_app()
+    return {"status": "model loaded"}
+
 # -----------------------------
 # Verify Face Endpoint
 # -----------------------------
@@ -73,6 +88,9 @@ def verify_face(payload: VerifyFaceRequest):
 
     selfie_img = get_attendance_selfie(payload.selfie_image_url)
     selfie_faces = face_app.get(selfie_img)
+    if not selfie_faces:
+      raise HTTPException(status_code=400, detail="No face detected in selfie")
+
     selfie_embeddings = [face.embedding for face in selfie_faces]
 
     api_results: List[StudentResult] = []
