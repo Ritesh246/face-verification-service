@@ -3,6 +3,7 @@
 import cv2
 import numpy as np
 import requests
+import logging
 
 from app.supabase_client import get_supabase_client
 
@@ -15,16 +16,20 @@ supabase = get_supabase_client()
 # -------------------------------
 
 def load_image_from_url(url: str) -> np.ndarray:
-    response = requests.get(url, timeout=15)
-    response.raise_for_status()
+    try:
+        response = requests.get(url, timeout=15)
+        response.raise_for_status()
 
-    img_array = np.frombuffer(response.content, np.uint8)
-    img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+        img_array = np.frombuffer(response.content, np.uint8)
+        img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
 
-    if img is None:
-        raise ValueError("Failed to decode image")
+        if img is None:
+            raise ValueError("Failed to decode image")
 
-    return img
+        return img
+
+    except Exception as e:
+        raise Exception(f"Error loading image from URL: {url} | {str(e)}")
 
 
 # -------------------------------
@@ -37,7 +42,8 @@ def get_attendance_selfie(selfie_url: str) -> np.ndarray:
     https://<project>.supabase.co/storage/v1/object/public/attendance-selfies/...
     """
 
-    print(f"🔥 SELFIE URL RECEIVED (PUBLIC): {selfie_url}")
+    logging.basicConfig(level=logging.INFO)
+    logging.info(f"SELFIE URL: {selfie_url}")
 
     # ✅ Direct HTTP fetch (NO signed URL)
     return load_image_from_url(selfie_url)
@@ -59,6 +65,9 @@ def get_registered_face(face_image_path: str) -> np.ndarray:
         .from_("face-images")
         .create_signed_url(face_image_path, expires_in=60)
     )
+
+    if "signedURL" not in signed:
+       raise Exception(f"Failed to create signed URL for {face_image_path}")
 
     signed_url = signed["signedURL"]
     return load_image_from_url(signed_url)
@@ -88,6 +97,9 @@ def get_registered_faces_by_rolls(roll_numbers: list[int]) -> dict:
     )
 
     registered_faces = {}
+    
+    if not response.data:
+       return {}
 
     for row in response.data:
         roll = row["roll_no"]
