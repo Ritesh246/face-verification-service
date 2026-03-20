@@ -34,20 +34,41 @@ app.add_middleware(
 _face_app = None
 _face_lock = threading.Lock()
 
+# def get_face_app():
+#     global _face_app
+#     if _face_app is None:
+#         with _face_lock:
+#             if _face_app is None:
+#                 logging.basicConfig(level=logging.INFO)
+#                 logging.info("Loading InsightFace model...")
+#                 fa = FaceAnalysis(
+#                     name="buffalo_l",
+#                     providers=["CPUExecutionProvider"]
+#                 )
+#                 fa.prepare(ctx_id=0, det_size=(640, 640))
+#                 _face_app = fa
+#                 print("✅ InsightFace model loaded")
+#     return _face_app
+
 def get_face_app():
     global _face_app
     if _face_app is None:
         with _face_lock:
             if _face_app is None:
-                logging.basicConfig(level=logging.INFO)
-                logging.info("Loading InsightFace model...")
+                # 1. Define a path in Vercel's writable /tmp directory
+                checkpoint_path = "/tmp/.insightface"
+                
+                # 2. Point InsightFace to this directory
+                # It will download the models here at runtime, NOT during build
                 fa = FaceAnalysis(
-                    name="buffalo_l",
+                    name="buffalo_l", 
+                    root=checkpoint_path, 
                     providers=["CPUExecutionProvider"]
                 )
+                
                 fa.prepare(ctx_id=0, det_size=(640, 640))
                 _face_app = fa
-                print("✅ InsightFace model loaded")
+                print("✅ InsightFace model loaded into /tmp")
     return _face_app
 
 # -----------------------------
