@@ -4,4 +4,4 @@ supabase
 numpy
 opencv-python-headless
 insightface
-onnxruntime
+onnxruntime-slim
